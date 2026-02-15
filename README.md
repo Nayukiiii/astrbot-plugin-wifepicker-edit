@@ -61,4 +61,4 @@
 | `auto_withdraw_enabled` | bool | false | 定时自动撤回（仅 aiocqhttp/OneBot 可用） |
 | `auto_withdraw_delay_seconds` | int | 5 | 自动撤回延迟秒数 |
 
-觉得插件好用的话，就给个start吧❤️~
+觉得插件好用的话，就给个star吧❤️~
