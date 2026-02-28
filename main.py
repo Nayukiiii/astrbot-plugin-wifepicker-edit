@@ -192,7 +192,7 @@ class RandomWifePlugin(Star):
     def _cleanup_inactive(self, group_id: str):
         return cleanup_inactive(self, group_id)
 
-    @filter.command("今日老婆", alias={"抽老婆"})
+    @filter.command("今日老婆", alias={"抽老婆", "jrlp"})
     async def draw_wife(self, event: AstrMessageEvent):
         async for result in self._cmd_draw_wife(event):
             yield result
@@ -374,7 +374,7 @@ class RandomWifePlugin(Star):
         ]
         yield event.chain_result(chain)
 
-    @filter.command("我的老婆", alias={"抽取历史"})
+    @filter.command("我的老婆", alias={"抽取历史", "wdlp"})
     async def show_history(self, event: AstrMessageEvent):
         async for result in self._cmd_show_history(event):
             yield result
@@ -404,8 +404,9 @@ class RandomWifePlugin(Star):
         res.append(f"\n剩余次数：{max(0, daily_limit - len(user_recs))}次")
         yield event.plain_result("\n".join(res))
 
-    @filter.command("强娶")
+    @filter.command("强娶", alias={"qiangqu"})
     async def force_marry(self, event: AstrMessageEvent):
+        """强娶 + @要娶的那个人"""
         async for result in self._cmd_force_marry(event):
             yield result
 
@@ -560,7 +561,7 @@ class RandomWifePlugin(Star):
         ]
         yield event.chain_result(chain)
 
-    @filter.command("关系图")
+    @filter.command("关系图", alias={"gxt"})
     async def show_graph(self, event: AstrMessageEvent):
         async for result in self._cmd_show_graph(event):
             yield result
@@ -666,7 +667,7 @@ class RandomWifePlugin(Star):
         except Exception as e:
             logger.error(f"渲染失败: {e}")
 
-    @filter.command("rbq排行")
+    @filter.command("rbq排行", alias={"rbqph"})
     async def rbq_ranking(self, event: AstrMessageEvent):
         if event.is_private_chat():
             yield event.plain_result("私聊看不了榜单哦~")
@@ -754,7 +755,7 @@ class RandomWifePlugin(Star):
             logger.error(f"渲染RBQ排行失败: {e}")
 
     @filter.permission_type(filter.PermissionType.ADMIN)
-    @filter.command("重置记录")
+    @filter.command("重置记录", alias={"czjl"})
     async def reset_records(self, event: AstrMessageEvent):
         async for result in self._cmd_reset_records(event):
             yield result
@@ -765,7 +766,7 @@ class RandomWifePlugin(Star):
         yield event.plain_result("今日抽取记录已重置！")
 
     @filter.permission_type(filter.PermissionType.ADMIN)
-    @filter.command("重置强娶时间")
+    @filter.command("重置强娶时间", alias={"czqqsj"})
     async def reset_force_cd(self, event: AstrMessageEvent):
         async for result in self._cmd_reset_force_cd(event):
             yield result
@@ -782,7 +783,7 @@ class RandomWifePlugin(Star):
         else:
             yield event.plain_result("💡 本群目前没有人在冷却期内。")
 
-    @filter.command("抽老婆帮助", alias={"老婆插件帮助"})
+    @filter.command("抽老婆帮助", alias={"老婆插件帮助", "clpbz"})
     async def show_help(self, event: AstrMessageEvent):
         async for result in self._cmd_show_help(event):
             yield result
