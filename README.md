@@ -40,11 +40,10 @@
 
 ## 🛠️ 环境要求
 
-本插件的关系图功能依赖于 AstrBot 的浏览器渲染引擎：
+本插件的关系图功能依赖于 AstrBot 的浏览器渲染引擎（环境一般astrbot自带，不用管）：
 
 1. **Playwright**：请确保你的 AstrBot 环境已安装 `Playwright` 浏览器驱动（AstrBot 通常自带）。
 2. **模板文件**：插件目录下需包含 `graph_template.html` 和 `rbq_ranking.html`。
-3. **网络环境**：渲染过程需要联网加载 `Vis.js` 库（已优化使用高速 CDN）。
 
 ## ⚙️ 配置项说明
 
@@ -54,8 +53,11 @@
 | --- | --- | --- | --- |
 | `daily_limit` | int | 1 | 每人每天可抽取的次数上限 |
 | `force_marry_cd` | int | 3 | 强娶后的冷却天数 |
+| `max_records` | int | 500 | 活跃群友的最大记录数 |
+| `excluded_users` | list | [] | 永远不会被抽中的 QQ 号列表（用于“今日老婆”） |
+| `force_marry_excluded_users` | list | [] | 强娶排除用户列表（在此列表中的 QQ 号不能被强娶） |
 | `keyword_trigger_enabled` | bool | false | 是否启用关键词触发（无需 `/` 前缀） |
-| `keyword_trigger_mode` | string | contains | 匹配模式：`exact`(精确) / `contains`(包含) |
+| `keyword_trigger_mode` | string | exact | 匹配模式：`exact`(精确) / `contains`(包含) |
 | `auto_set_other_half` | bool | false | 自动设置对方老婆（对方当天无记录时生效） |
 | `auto_withdraw_enabled` | bool | false | 定时自动撤回消息（仅 OneBot 协议可用） |
 | `auto_withdraw_delay_seconds` | int | 5 | 自动撤回的延迟秒数 |
