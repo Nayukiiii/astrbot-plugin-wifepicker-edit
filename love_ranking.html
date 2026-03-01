@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        :root {
+            --accent: #C85A7C; --accent-light: #FFB7C5; --accent-soft: #FFD6E0;
+            --text-primary: #4A3F4B; --text-light: #FFFFFF;
+            --rank-1: #FFD700; --rank-2: #C0C0C0; --rank-3: #CD7F32;
+        }
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+            background: #FFF5F7; margin: 0; padding: 0;
+            width: 480px; display: inline-block;
+        }
+        .container { background: #FFFFFF; width: 480px; overflow: hidden; position: relative; }
+        .header {
+            background: linear-gradient(135deg, #FFB7C5 0%, #F8A4C0 50%, #C85A7C 100%);
+            color: var(--text-light); padding: 22px;
+            text-align: center; font-size: 22px; font-weight: bold;
+            letter-spacing: 3px; text-shadow: 1px 1px 0 rgba(0,0,0,0.15);
+            position: relative;
+        }
+        .header::before { content: '🌸'; position: absolute; top: 8px; left: 14px; font-size: 18px; opacity: 0.5; }
+        .header::after { content: '🌸'; position: absolute; bottom: 8px; right: 14px; font-size: 18px; opacity: 0.5; }
+        .item {
+            display: flex; align-items: center;
+            padding: 10px 15px; height: 80px;
+            border-bottom: 2px solid #FFF0F5;
+            position: relative;
+        }
+        .item:nth-child(-n+3) {
+            background: linear-gradient(90deg, #FFF5F8 0%, #FFFFFF 100%);
+        }
+        .item:nth-child(odd) { background: #FFFAFC; }
+        .rank {
+            font-weight: bold; width: 34px; font-size: 16px;
+            color: var(--accent); text-align: center; flex-shrink: 0;
+        }
+        .rank.top1 { color: var(--rank-1); font-size: 22px; text-shadow: 1px 1px 0 #DAA520; }
+        .rank.top2 { color: var(--rank-2); font-size: 20px; }
+        .rank.top3 { color: var(--rank-3); font-size: 20px; }
+        .couple-avatars {
+            display: flex; align-items: center; gap: 4px;
+            margin: 0 10px; flex-shrink: 0;
+        }
+        .av {
+            width: 42px; height: 42px;
+            border: 2px solid var(--accent-light);
+            box-shadow: 2px 2px 0px var(--accent-soft);
+        }
+        .heart-icon { font-size: 16px; color: var(--accent); }
+        .info { flex: 1; min-width: 0; }
+        .cp-names {
+            font-size: 13px; color: var(--text-primary); font-weight: bold;
+            overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+        }
+        .bar-wrap {
+            margin-top: 5px; height: 14px;
+            background: #F5E6EA; position: relative;
+            box-shadow: inset 1px 1px 0 #E8D5E0;
+        }
+        /* 像素方块进度条 */
+        .bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #FFB7C5, #C85A7C);
+            background-size: 8px 8px;
+            image-rendering: pixelated;
+        }
+        .bar-fill.full {
+            background: linear-gradient(90deg, #FF8FAB, #C85A7C, #A0365A);
+            position: relative;
+        }
+        .bar-fill.full::after {
+            content: '✨'; position: absolute; right: 2px; top: -2px; font-size: 10px;
+        }
+        .value-tag {
+            font-size: 14px; color: var(--accent); font-weight: bold;
+            margin-left: 8px; white-space: nowrap; flex-shrink: 0;
+            min-width: 40px; text-align: right;
+        }
+        .footer {
+            padding: 12px; text-align: center;
+            font-size: 11px; color: var(--accent); opacity: 0.5;
+        }
+        /* 花瓣装饰 - 仅前3名 */
+        .item:nth-child(1)::after,
+        .item:nth-child(2)::after,
+        .item:nth-child(3)::after {
+            content: '🌸'; position: absolute; right: 8px; top: 4px;
+            font-size: 12px; opacity: 0.3;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">{{ title }}</div>
+        {% for r in ranking %}
+        <div class="item">
+            <div class="rank {% if r.rank == 1 %}top1{% elif r.rank == 2 %}top2{% elif r.rank == 3 %}top3{% endif %}">#{{ r.rank }}</div>
+            <div class="couple-avatars">
+                <img class="av" src="https://q4.qlogo.cn/headimg_dl?dst_uin={{ r.user_a }}&spec=100&t={{ range(1,99999)|random }}">
+                <span class="heart-icon">❤️</span>
+                <img class="av" src="https://q4.qlogo.cn/headimg_dl?dst_uin={{ r.user_b }}&spec=100&t={{ range(1,99999)|random }}">
+            </div>
+            <div class="info">
+                <div class="cp-names">{{ r.name_a }} & {{ r.name_b }}</div>
+                <div class="bar-wrap">
+                    <div class="bar-fill {% if r.value >= 100 %}full{% endif %}" style="width: {{ r.value }}%;"></div>
+                </div>
+            </div>
+            <div class="value-tag">{{ r.value }}%</div>
+        </div>
+        {% endfor %}
+        <div class="footer">🌸 好感度每月1日刷新 · 强娶同一人+1~10% · 不强娶则衰减 🌸</div>
+    </div>
+</body>
+</html>

@@ -91,5 +91,98 @@
             "max": 60,
             "step": 1
         }
+    },
+    "caonj_probability": {
+        "type": "float",
+        "description": "草宁隽触发概率（%）",
+        "hint": "发送草宁隽指令后实际触发的概率，取值 0~100。例如填 30 表示 30% 概率触发，填 100 则必定触发。",
+        "default": 30,
+        "slider": {
+            "min": 0,
+            "max": 100,
+            "step": 5
+        }
+    },
+    "ri_probability": {
+        "type": "float",
+        "description": "日群友随机模式触发概率（%）",
+        "hint": "发送\"日群友\"（不带@）的触发概率，取值 0~100。失败不消耗次数。",
+        "default": 30,
+        "slider": {
+            "min": 0,
+            "max": 100,
+            "step": 5
+        }
+    },
+    "ri_at_probability": {
+        "type": "float",
+        "description": "日群友@指定模式触发概率（%）",
+        "hint": "发送\"日群友 @某人\"的触发概率，取值 0~100。概率成功后才消耗@指定额度。",
+        "default": 30,
+        "slider": {
+            "min": 0,
+            "max": 100,
+            "step": 5
+        }
+    },
+    "ri_target_max": {
+        "type": "int",
+        "description": "每人每天最多被日次数（@指定模式）",
+        "default": 3,
+        "hint": "每个群友每天最多被@日群友的次数上限"
+    },
+    "ri_invite_max": {
+        "type": "int",
+        "description": "每人每天最多跟日次数（/我也日）",
+        "default": 3,
+        "hint": "每个群友每天可以用/我也日跟进的次数上限"
+    },
+    "force_marry_cd_mode": {
+        "type": "string",
+        "description": "强娶冷却模式",
+        "hint": "daily：每天0点刷新，每人每天只能强娶一次；days：原来的天数CD模式（根据force_marry_cd配置天数）。",
+        "options": ["daily", "days"],
+        "default": "days"
+    },
+    "force_marry_lock_count": {
+        "type": "int",
+        "description": "强娶上锁次数",
+        "hint": "同一天被强娶达到此次数后，该用户将被上锁无法再被强娶。",
+        "default": 2
+    },
+    "force_marry_daily_limit": {
+        "type": "int",
+        "description": "强娶每日次数(daily模式)",
+        "hint": "daily模式下每人每天可以强娶的次数上限。",
+        "default": 2
+    },
+    "affinity_bypass_lock_threshold": {
+        "type": "int",
+        "description": "好感度无视上锁阈值",
+        "hint": "好感度达到此值时，可以无视上锁保护直接强娶对方。",
+        "default": 50,
+        "slider": {
+            "min": 10,
+            "max": 100,
+            "step": 5
+        }
+    },
+    "force_marry_unlock_ri_count": {
+        "type": "int",
+        "description": "被日解锁次数",
+        "hint": "上锁的用户被日群友@指定日达到此次数后，自动解锁可再被强娶。",
+        "default": 3
+    },
+    "nj_qq": {
+        "type": "string",
+        "description": "nj的QQ号",
+        "hint": "用于获取nj头像和显示在草nj排行榜、体内液体查询中。请填写真实QQ号。",
+        "default": ""
+    },
+    "nj_name": {
+        "type": "string",
+        "description": "nj的昵称",
+        "hint": "显示在排行榜和体内液体查询中的nj名字。",
+        "default": "宁隽"
     }
 }
