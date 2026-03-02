@@ -234,8 +234,11 @@ class RandomWifePlugin(Star):
 
     def _get_affinity_record(self, group_id: str, a: str, b: str) -> dict:
         key = self._affinity_key(a, b)
-        default = {"value": 0, "last_force_date": "", "first_100": False,
-                    "last_decay_date": "", "last_reset_month": ""}
+        default = {
+            "value": 0, "last_force_date": "", "first_100": False,
+            "first_100_date": "", "last_decay_date": "", "last_reset_month": "",
+            "last_gain": 0, "last_gain_date": "",
+        }
         return self.affinity.get(group_id, {}).get(key, dict(default))
 
     def _ensure_affinity_monthly_reset(self, group_id: str) -> None:
@@ -245,6 +248,9 @@ class RandomWifePlugin(Star):
             if rec.get("last_reset_month", "") != cm:
                 rec["value"] = 0
                 rec["first_100"] = False
+                rec["first_100_date"] = ""      # ★ 新增
+                rec["last_gain"] = 0             # ★ 新增
+                rec["last_gain_date"] = ""       # ★ 新增
                 rec["last_reset_month"] = cm
                 changed = True
         if changed:
@@ -285,20 +291,39 @@ class RandomWifePlugin(Star):
         if group_id not in self.affinity:
             self.affinity[group_id] = {}
         if key not in self.affinity[group_id]:
-            self.affinity[group_id][key] = {"value": 0, "last_force_date": "",
-                "first_100": False, "last_decay_date": "", "last_reset_month": ""}
+            self.affinity[group_id][key] = {
+                "value": 0, "last_force_date": "", "first_100": False,
+                "first_100_date": "", "last_decay_date": "", "last_reset_month": "",
+                "last_gain": 0, "last_gain_date": "",
+            }
         rec = self.affinity[group_id][key]
         today = datetime.now().strftime("%Y-%m-%d")
         cm = datetime.now().strftime("%Y-%m")
         if rec.get("last_reset_month", "") != cm:
-            rec["value"] = 0; rec["first_100"] = False; rec["last_reset_month"] = cm
+            rec["value"] = 0
+            rec["first_100"] = False
+            rec["first_100_date"] = ""
+            rec["last_gain"] = 0
+            rec["last_gain_date"] = ""
+            rec["last_reset_month"] = cm
         self._process_affinity_decay(group_id, a, b)
-        rec["value"] = min(100, rec.get("value", 0) + random.randint(1, 10))
+        gain = random.randint(1, 10)
+        old_value = rec.get("value", 0)
+        rec["value"] = min(100, old_value + gain)
+        actual_gain = rec["value"] - old_value  # 可能被 min(100) 截断
         rec["last_force_date"] = today
         rec["last_decay_date"] = today
+        # ★ 记录今日增量（同一天多次强娶累加）
+        if rec.get("last_gain_date") == today:
+            rec["last_gain"] = rec.get("last_gain", 0) + actual_gain
+        else:
+            rec["last_gain"] = actual_gain
+            rec["last_gain_date"] = today
         first_time = False
         if rec["value"] >= 100 and not rec.get("first_100", False):
-            rec["first_100"] = True; first_time = True
+            rec["first_100"] = True
+            rec["first_100_date"] = today   # ★ 记录达成日期
+            first_time = True
         save_json(self.affinity_file, self.affinity)
         return rec["value"], first_time
 
@@ -311,8 +336,12 @@ class RandomWifePlugin(Star):
             parts = key.split("->")
             if len(parts) != 2:
                 continue
-            pairs.append({"user_a": parts[0], "user_b": parts[1],
-                          "value": rec.get("value", 0), "first_100": rec.get("first_100", False)})
+            pairs.append({
+                "user_a": parts[0], "user_b": parts[1],
+                "value": rec.get("value", 0),
+                "first_100": rec.get("first_100", False),
+                "first_100_date": rec.get("first_100_date", ""),
+            })
         pairs.sort(key=lambda x: x["value"], reverse=True)
         return pairs
 
@@ -985,10 +1014,6 @@ class RandomWifePlugin(Star):
     # ============================================================
 
     @filter.command("好感度")
-    async def affinity_query(self, event: AstrMessageEvent):
-        async for result in self._cmd_affinity(event):
-            yield result
-
     async def _cmd_affinity(self, event: AstrMessageEvent):
         if event.is_private_chat():
             yield event.plain_result("此功能仅在群聊中可用哦~")
@@ -1009,30 +1034,65 @@ class RandomWifePlugin(Star):
         except Exception:
             pass
 
+        # ===== @某人模式：不变 =====
         if target_id and target_id != user_id:
             value = self._get_affinity_value(group_id, user_id, target_id)
             tname = user_map.get(target_id, f"用户({target_id})")
             bar = "█" * int(value / 5) + "░" * (20 - int(value / 5))
             yield event.plain_result(f"💗 你与【{tname}】的好感度\n[{bar}] {value}%")
+            return
+
+        # ===== 无@模式：今日老婆 + 今日增量 + CP列表 =====
+        today = datetime.now().strftime("%Y-%m-%d")
+
+        # 找今日老婆（从今日记录里取最新一条）
+        group_records = self._get_group_records(group_id)
+        today_wife = None
+        for r in reversed(group_records):
+            if r.get("user_id") == user_id:
+                today_wife = r
+                break
+
+        lines = ["我的好感度"]
+
+        if today_wife:
+            wife_id = today_wife.get("wife_id", "")
+            wife_name = user_map.get(wife_id, today_wife.get("wife_name", f"用户({wife_id})"))
+            # 今日增量
+            gain = 0
+            if wife_id:
+                rec = self._get_affinity_record(group_id, user_id, wife_id)
+                if rec.get("last_gain_date") == today:
+                    gain = rec.get("last_gain", 0)
+            lines.append(f"今日老婆：【{wife_name}】")
+            if gain > 0:
+                lines.append(f"今日好感度 +{gain}%")
         else:
-            self._ensure_affinity_monthly_reset(group_id)
-            pairs = []
-            for key, rec in self.affinity.get(group_id, {}).items():
-                parts = key.split("->")
-                if len(parts) != 2 or user_id not in parts: continue
-                other = parts[1] if parts[0] == user_id else parts[0]
-                val = rec.get("value", 0)
-                if val > 0: pairs.append({"other": other, "value": val})
-            if not pairs:
-                yield event.plain_result("你还没有和任何人建立好感度~"); return
+            lines.append("今日还没有抽老婆哦~")
+
+        # CP列表
+        self._ensure_affinity_monthly_reset(group_id)
+        pairs = []
+        for key, rec in self.affinity.get(group_id, {}).items():
+            parts = key.split("->")
+            if len(parts) != 2 or user_id not in parts: continue
+            other = parts[1] if parts[0] == user_id else parts[0]
+            val = rec.get("value", 0)
+            if val > 0:
+                pairs.append({"other": other, "value": val})
+
+        if pairs:
             pairs.sort(key=lambda x: x["value"], reverse=True)
-            lines = ["🌸 你的好感度列表："]
+            lines.append("─────────────")
+            lines.append("本月恋人好感度：")
             for p in pairs[:10]:
                 name = user_map.get(p["other"], f"用户({p['other']})")
                 bar = "█" * int(p["value"] / 10) + "░" * (10 - int(p["value"] / 10))
                 lines.append(f"  {name}: [{bar}] {p['value']}%")
-            yield event.plain_result("\n".join(lines))
+        else:
+            lines.append("本月还没有好感度记录~")
 
+        yield event.plain_result("\n".join(lines))
     # ============================================================
     # /好感度排行
     # ============================================================
@@ -1100,9 +1160,16 @@ class RandomWifePlugin(Star):
             yield event.plain_result("私聊看不了榜单哦~"); return
         group_id = str(event.get_group_id())
         if not is_allowed_group(group_id, self.config): return
-        pairs = self._get_all_affinity_pairs(group_id)
+
+        all_pairs = self._get_all_affinity_pairs(group_id)
+        # 只取达成过100%的CP
+        pairs = [p for p in all_pairs if p.get("first_100") and p.get("first_100_date")]
         if not pairs:
-            yield event.plain_result("本群还没有恩爱CP呢~"); return
+            yield event.plain_result("本月还没有情侣达成100%好感度呢~"); return
+
+        # 按达成日期从早到晚排（越早越靠前）
+        pairs.sort(key=lambda x: x["first_100_date"])
+
         user_map = {}
         try:
             if event.get_platform_name() == "aiocqhttp":
@@ -1113,13 +1180,20 @@ class RandomWifePlugin(Star):
                     user_map[uid] = m.get("card") or m.get("nickname") or uid
         except Exception:
             pass
-        top = pairs[:10]
-        ranking = [{"rank": i+1, "user_a": p["user_a"], "user_b": p["user_b"],
-                     "name_a": user_map.get(p["user_a"], f"用户({p['user_a']})"),
-                     "name_b": user_map.get(p["user_b"], f"用户({p['user_b']})"),
-                     "value": p["value"]} for i, p in enumerate(top)]
 
-        # 尝试用 love_ranking.html，fallback 到 affinity_ranking.html
+        top = pairs[:10]
+        ranking = [
+            {
+                "rank": i + 1,
+                "user_a": p["user_a"], "user_b": p["user_b"],
+                "name_a": user_map.get(p["user_a"], f"用户({p['user_a']})"),
+                "name_b": user_map.get(p["user_b"], f"用户({p['user_b']})"),
+                "value": p["value"],
+                "first_100_date": p["first_100_date"],
+            }
+            for i, p in enumerate(top)
+        ]
+
         for tpl_name in ("love_ranking.html", "affinity_ranking.html"):
             tp = os.path.join(self.curr_dir, tpl_name)
             if os.path.exists(tp):
@@ -1128,16 +1202,17 @@ class RandomWifePlugin(Star):
                 h = 100 + len(ranking) * 80 + 50
                 try:
                     url = await asyncio.wait_for(self.html_render(tpl,
-                        {"ranking": ranking, "title": "💕 恩爱排行 💕"},
+                        {"ranking": ranking, "title": " 恩爱排行 "},
                         options={"type": "png", "quality": None, "full_page": False,
                                  "clip": {"x": 0, "y": 0, "width": 480, "height": h},
                                  "scale": "device", "device_scale_factor_level": "ultra"}), timeout=30.0)
                     yield event.image_result(url); return
                 except Exception as e:
                     logger.error(f"渲染恩爱排行失败: {e}")
-        lines = ["💕 恩爱排行 💕"]
+        # fallback 文字
+        lines = [" 恩爱排行（本月最快达成100%）"]
         for r in ranking:
-            lines.append(f"#{r['rank']} {r['name_a']} ❤️ {r['name_b']}: {r['value']}%")
+            lines.append(f"#{r['rank']} {r['name_a']} ❤️ {r['name_b']}  达成日期：{r['first_100_date']}")
         yield event.plain_result("\n".join(lines))
 
     @filter.command("关系图")
@@ -2185,6 +2260,19 @@ class RandomWifePlugin(Star):
                 return
 
             target_id = random.choice(pool)
+
+            # ★ 恋爱保护：选到恋爱中的人提示跑掉，不消耗额度
+            target_pl_random = self._get_pure_love_partner(group_id, target_id)
+            if target_pl_random:
+                target_name_tmp = user_map.get(target_id, f"用户({target_id})")
+                try:
+                    if event.get_platform_name() == "aiocqhttp":
+                        target_name_tmp = resolve_member_name(members, user_id=target_id, fallback=target_name_tmp)
+                except Exception:
+                    pass
+                yield event.plain_result(f"【{target_name_tmp}】正在谈恋爱，跑掉了💕")
+                return  # 不消耗额度，直接return
+
             user_name = event.get_sender_name() or f"用户({user_id})"
             target_name = f"用户({target_id})"
             try:
@@ -2209,12 +2297,9 @@ class RandomWifePlugin(Star):
             # 今日关系图记录
             group_ri_records = self._get_ri_group_records(group_id)
             group_ri_records.append({
-                "user_id": user_id,
-                "user_name": user_name,
-                "target_id": target_id,
-                "target_name": target_name,
-                "timestamp": datetime.now().isoformat(),
-                "type": "random",
+                "user_id": user_id, "user_name": user_name,
+                "target_id": target_id, "target_name": target_name,
+                "timestamp": datetime.now().isoformat(), "type": "random",
             })
             save_json(self.ri_records_file, self.ri_records)
 
@@ -2240,7 +2325,6 @@ class RandomWifePlugin(Star):
                 Comp.Image.fromURL(target_avatar),
             ]
             yield event.chain_result(chain)
-
     @filter.command("我也日")
     async def wo_ye_ri(self, event: AstrMessageEvent):
         async for result in self._cmd_wo_ye_ri(event):
